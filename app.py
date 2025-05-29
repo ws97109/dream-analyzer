@@ -82,7 +82,7 @@ class VideoGenerator:
                 input_image = input_image.convert('RGB')
             
             # 調整圖像尺寸（SVD 需要特定尺寸比例）
-            target_width, target_height = 1024, 576
+            target_width, target_height = 512, 288
             input_image = input_image.resize((target_width, target_height), Image.Resampling.LANCZOS)
             
             print("🎬 開始生成影片...")
@@ -90,16 +90,16 @@ class VideoGenerator:
             # 生成參數（針對速度優化）
             video_params = {
                 "image": input_image,
-                "decode_chunk_size": 2,  # 較小的chunk size減少記憶體使用
+                "decode_chunk_size": 1,  # 較小的chunk size減少記憶體使用
                 "generator": torch.Generator(device=self.device).manual_seed(42),
                 "motion_bucket_id": 127,  # 中等運動強度
                 "noise_aug_strength": 0.02,  # 較低的噪聲增強以提高穩定性
-                "num_frames": 25,  # 標準幀數
+                "num_frames": 8,  # 標準幀數
             }
             
             # 針對不同設備調整參數
             if self.device == "cpu":
-                video_params["num_frames"] = 14  # CPU模式減少幀數
+                video_params["num_frames"] = 8  # CPU模式減少幀數
                 video_params["decode_chunk_size"] = 1
             elif self.device == "mps":
                 video_params["decode_chunk_size"] = 4
