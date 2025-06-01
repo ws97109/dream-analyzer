@@ -13,8 +13,10 @@ torchsde==0.2.6
 einops
 opencv-contrib-python
 safetensors
-diffusers==0.30.0
+diffusers==0.33.1
 transformers==4.46.2
 torch>=2.1.0
 torchvision
 torchaudio
+psutil
+python-dotenv
