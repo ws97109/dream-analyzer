@@ -8,175 +8,8 @@ import requests
 from PIL import Image
 import numpy as np
 import torch
-from diffusers import StableDiffusionPipeline, UniPCMultistepScheduler, StableVideoDiffusionPipeline
-import cv2
+from diffusers import StableDiffusionPipeline, UniPCMultistepScheduler
 import gc
-
-class VideoGenerator:
-    """獨立的影片生成類別"""
-    
-    def __init__(self, device=None, torch_dtype=None):
-        self.video_pipe = None
-        self.device = device or "cpu"
-        self.torch_dtype = torch_dtype or torch.float32
-        self.video_loaded = False
-        
-    def load_video_model(self):
-        """載入影片生成模型"""
-        if self.video_loaded:
-            return True
-            
-        try:
-            print("🎬 載入 Stable Video Diffusion 模型...")
-            video_model_id = "stabilityai/stable-video-diffusion-img2vid-xt"
-            
-            video_kwargs = {
-                "torch_dtype": self.torch_dtype
-            }
-            
-            # 針對不同設備的優化
-            if self.device != "mps" and self.torch_dtype == torch.float16:
-                video_kwargs["variant"] = "fp16"
-            
-            self.video_pipe = StableVideoDiffusionPipeline.from_pretrained(
-                video_model_id, **video_kwargs
-            ).to(self.device)
-            
-            # 記憶體優化設定
-            if self.device == "cuda":
-                self.video_pipe.enable_model_cpu_offload()
-                self.video_pipe.enable_vae_slicing()
-            elif self.device == "mps":
-                self.video_pipe.enable_attention_slicing(1)
-            else:
-                self.video_pipe.enable_attention_slicing()
-            
-            self.video_loaded = True
-            print(f"✅ 影片生成模型載入完成，使用設備: {self.device}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ 影片模型載入失敗: {e}")
-            self.video_pipe = None
-            self.video_loaded = False
-            return False
-    
-    def generate_video_from_image(self, image_path, static_dir, story_text=""):
-        """從圖像生成影片"""
-        try:
-            # 確保模型已載入
-            if not self.load_video_model() or self.video_pipe is None:
-                print("❌ 影片生成模型未載入")
-                return None
-            
-            # 載入圖像
-            full_image_path = os.path.join(static_dir, image_path)
-            if not os.path.exists(full_image_path):
-                print(f"❌ 找不到圖像文件: {full_image_path}")
-                return None
-            
-            input_image = Image.open(full_image_path)
-            
-            # 確保圖像為RGB模式
-            if input_image.mode != 'RGB':
-                input_image = input_image.convert('RGB')
-            
-            # 調整圖像尺寸（SVD 需要特定尺寸比例）
-            target_width, target_height = 512, 288
-            input_image = input_image.resize((target_width, target_height), Image.Resampling.LANCZOS)
-            
-            print("🎬 開始生成影片...")
-            
-            # 生成參數（針對速度優化）
-            video_params = {
-                "image": input_image,
-                "decode_chunk_size": 1,  # 較小的chunk size減少記憶體使用
-                "generator": torch.Generator(device=self.device).manual_seed(42),
-                "motion_bucket_id": 127,  # 中等運動強度
-                "noise_aug_strength": 0.02,  # 較低的噪聲增強以提高穩定性
-                "num_frames": 8,  # 標準幀數
-            }
-            
-            # 針對不同設備調整參數
-            if self.device == "cpu":
-                video_params["num_frames"] = 8  # CPU模式減少幀數
-                video_params["decode_chunk_size"] = 1
-            elif self.device == "mps":
-                video_params["decode_chunk_size"] = 4
-            
-            start_time = time.time()
-            
-            # 清理記憶體
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
-            
-            with torch.no_grad():
-                frames = self.video_pipe(**video_params).frames[0]
-            
-            generation_time = time.time() - start_time
-            print(f"🎬 影片幀生成完成，耗時: {generation_time:.2f}秒，幀數: {len(frames)}")
-            
-            if not frames or len(frames) == 0:
-                print("❌ 影片幀生成失敗")
-                return None
-            
-            # 保存影片
-            timestamp = int(time.time())
-            random_id = str(uuid.uuid4())[:8]
-            output_filename = f"dream_video_{timestamp}_{random_id}.mp4"
-            
-            output_dir = os.path.join(static_dir, 'videos')
-            os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, output_filename)
-            
-            # 使用 OpenCV 保存影片
-            fps = 8  # 8 FPS
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(output_path, fourcc, fps, (target_width, target_height))
-            
-            for frame in frames:
-                if frame is None:
-                    continue
-                frame_array = np.array(frame)
-                if frame_array.shape[2] == 3:  # RGB
-                    frame_bgr = cv2.cvtColor(frame_array, cv2.COLOR_RGB2BGR)
-                else:
-                    frame_bgr = frame_array
-                out.write(frame_bgr)
-            
-            out.release()
-            
-            # 驗證影片文件
-            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                print(f"✅ 影片保存成功: {output_filename}")
-                return os.path.join('videos', output_filename)
-            else:
-                print("❌ 影片文件保存失敗或文件為空")
-                return None
-                
-        except Exception as e:
-            print(f"❌ 影片生成失敗: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
-    def clear_video_memory(self):
-        """清理影片模型記憶體"""
-        if self.video_pipe is not None:
-            del self.video_pipe
-            self.video_pipe = None
-        
-        self.video_loaded = False
-        gc.collect()
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        elif torch.backends.mps.is_available():
-            torch.mps.empty_cache()
-        
-        print("🎬 影片模型記憶體已清理")
-
 
 class DreamAnalyzer:
     def __init__(self):
@@ -196,9 +29,6 @@ class DreamAnalyzer:
         self.current_device = None
         self.torch_dtype = None
         
-        # 影片生成器
-        self.video_generator = None
-        
         # 可用模型
         self.models = {
             "stable-diffusion-v1-5": "runwayml/stable-diffusion-v1-5",
@@ -215,7 +45,6 @@ class DreamAnalyzer:
         """創建必要的目錄"""
         directories = [
             os.path.join(self.static_dir, 'images'),
-            os.path.join(self.static_dir, 'videos'),  # 新增影片目錄
             os.path.join(self.static_dir, 'shares')
         ]
         for directory in directories:
@@ -240,16 +69,6 @@ class DreamAnalyzer:
         else:
             self.current_device = "cpu"
             self.torch_dtype = torch.float32
-
-    def _initialize_video_generator(self):
-        """初始化影片生成器"""
-        if self.video_generator is None:
-            self._initialize_device()
-            self.video_generator = VideoGenerator(
-                device=self.current_device, 
-                torch_dtype=self.torch_dtype
-            )
-        return self.video_generator
 
     def _load_image_model(self):
         """載入圖像生成模型"""
@@ -477,23 +296,6 @@ class DreamAnalyzer:
             print(f"❌ 圖像生成錯誤: {e}")
             return None
 
-    def _generate_video(self, image_path, dream_text):
-        """生成影片（新增功能）"""
-        try:
-            # 初始化影片生成器
-            video_gen = self._initialize_video_generator()
-            
-            # 生成影片
-            video_path = video_gen.generate_video_from_image(
-                image_path, self.static_dir, dream_text
-            )
-            
-            return video_path
-            
-        except Exception as e:
-            print(f"❌ 影片生成錯誤: {e}")
-            return None
-
     def _analyze_psychology(self, dream_text):
         """心理分析"""
         system_prompt = """你是夢境心理分析專家，分析夢境的象徵意義和心理狀態，
@@ -516,7 +318,6 @@ class DreamAnalyzer:
                 'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'finalStory': data.get('finalStory', ''),
                 'imagePath': data.get('imagePath', ''),
-                'videoPath': data.get('videoPath', ''),  # 新增影片路徑
                 'psychologyAnalysis': data.get('psychologyAnalysis', '')
             }
             
@@ -537,15 +338,9 @@ class DreamAnalyzer:
         ollama_status = self._check_ollama_status()
         local_models_status = self.models_loaded or self._load_image_model()
         
-        # 檢查影片生成器狀態
-        video_status = False
-        if self.video_generator:
-            video_status = self.video_generator.video_loaded
-        
         return jsonify({
             'ollama': ollama_status,
             'local_models': local_models_status,
-            'video_models': video_status,  # 新增影片模型狀態
             'device': self.current_device,
             'available_models': list(self.models.keys()),
             'timestamp': int(time.time())
@@ -555,7 +350,6 @@ class DreamAnalyzer:
         data = request.json
         dream_text = data.get('dream', '')
         selected_model = data.get('model', 'stable-diffusion-v1-5')
-        generate_video = data.get('generateVideo', False)  # 新增影片生成選項
         
         # 輸入驗證
         if not dream_text or len(dream_text.strip()) < 10:
@@ -598,16 +392,6 @@ class DreamAnalyzer:
             if local_models_status:
                 image_path = self._generate_image(dream_text)
             
-            # 生成影片（新增功能）
-            video_path = None
-            if generate_video and image_path and local_models_status:
-                print("🎬 生成夢境影片...")
-                video_path = self._generate_video(image_path, dream_text)
-                if video_path:
-                    print("✅ 影片生成成功")
-                else:
-                    print("⚠️  影片生成失敗，但不影響其他功能")
-            
             # 心理分析
             print("🧠 進行心理分析...")
             psychology_analysis = self._analyze_psychology(dream_text)
@@ -615,12 +399,10 @@ class DreamAnalyzer:
             response = {
                 'finalStory': final_story,
                 'imagePath': '/static/' + image_path if image_path else None,
-                'videoPath': '/static/' + video_path if video_path else None,  # 新增影片路徑
                 'psychologyAnalysis': psychology_analysis,
                 'apiStatus': {
                     'ollama': ollama_status,
                     'local_models': local_models_status,
-                    'video_models': self.video_generator.video_loaded if self.video_generator else False,  # 新增影片模型狀態
                     'device': self.current_device,
                     'current_model': selected_model
                 },
@@ -628,8 +410,7 @@ class DreamAnalyzer:
                     'timestamp': int(time.time()),
                     'inputLength': len(dream_text),
                     'storyLength': len(final_story) if final_story else 0,
-                    'requestId': request_id[:20],
-                    'videoGenerated': video_path is not None  # 新增影片生成狀態
+                    'requestId': request_id[:20]
                 }
             }
             
@@ -686,140 +467,10 @@ class DreamAnalyzer:
             print(f"❌ 載入分享內容錯誤: {e}")
             return jsonify({'error': '載入分享內容時發生錯誤'}), 500
 
-    def clear_all_memory(self):
-        """清理所有模型記憶體"""
-        # 清理圖像模型
-        if self.image_pipe is not None:
-            del self.image_pipe
-            self.image_pipe = None
-        
-        # 清理影片模型
-        if self.video_generator:
-            self.video_generator.clear_video_memory()
-        
-        self.models_loaded = False
-        gc.collect()
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        elif torch.backends.mps.is_available():
-            torch.mps.empty_cache()
-        
-        print("🧹 所有模型記憶體已清理")
-
     def run(self, debug=False, host='0.0.0.0', port=5002):
         """啟動應用"""
-        try:
-            # 在程式結束時清理記憶體
-            import atexit
-            atexit.register(self.clear_all_memory)
-            
-            print("🚀 啟動夢境分析應用...")
-            
-            # 檢查服務狀態
-            print("檢查服務狀態...")
-            ollama_status = self._check_ollama_status()
-            local_models_status = self._load_image_model()
-            
-            # 輸出狀態報告
-            print("=" * 80)
-            print("夢境分析系統 - 含影片生成功能 啟動狀態報告")
-            print("=" * 80)
-            print(f"Ollama API (localhost:11434): {'✅ 正常' if ollama_status else '❌ 異常'}")
-            print(f"本地圖像生成模型: {'✅ 可用' if local_models_status else '❌ 不可用'}")
-            print(f"本地影片生成模型: {'✅ 可用' if self.video_generator and self.video_generator.video_loaded else '⚠️  需要時載入'}")
-            print(f"靜態檔案目錄: {self.static_dir}")
-            
-            # 檢查 PyTorch 和設備支持
-            if torch.backends.mps.is_available():
-                print("✅ 已啟用 Metal Performance Shaders (MPS) 加速")
-                device_info = "MPS (Apple Silicon 優化)"
-            elif torch.cuda.is_available():
-                print("✅ 已啟用 CUDA 加速")
-                device_info = f"CUDA - {torch.cuda.get_device_name()}"
-            else:
-                print("⚠️  使用 CPU 模式，速度可能較慢")
-                device_info = "CPU"
-            
-            print(f"PyTorch 版本: {torch.__version__}")
-            print(f"使用設備: {device_info}")
-            print("=" * 80)
-            
-            # 系統功能說明
-            print("🔧 系統功能狀態:")
-            print(f"   • 故事生成: {'✅ 可用 (Ollama qwen2.5:14b)' if ollama_status else '❌ 不可用'}")
-            print(f"   • 圖像生成: {'✅ 可用 (Stable Diffusion v1.5)' if local_models_status else '❌ 不可用'}")
-            print(f"   • 影片生成: {'✅ 可用 (Stable Video Diffusion)' if self.video_generator else '⚠️  需要時載入'}")
-            print(f"   • 心理分析: {'✅ 可用 (Ollama)' if ollama_status else '❌ 不可用'}")
-            print()
-            
-            print("🎬 影片生成特性:")
-            print("   • 圖像轉影片: 從生成的圖像創建動態影片")
-            print("   • 解析度: 1024x576，25幀 (CPU模式為14幀)")
-            print("   • 幀率: 8 FPS")
-            print("   • 格式: MP4")
-            print("   • 智能記憶體管理")
-            print("   • 可選擇是否生成影片")
-            print()
-            
-            if not ollama_status:
-                print("❌ 警告: Ollama API 無法連接")
-                print("   請確認 Ollama 服務是否運行在 localhost:11434")
-                print("   啟動命令: ollama serve")
-                print("   必須先安裝模型: ollama pull qwen2.5:14b")
-                print()
-            
-            if not local_models_status:
-                print("❌ 警告: 本地生成模型不可用")
-                print("   首次運行時會自動下載模型")
-                print("   圖像模型約 4GB，影片模型約 6-8GB")
-                print("   請確保網路連接正常且有足夠的儲存空間")
-                print()
-            
-            print("⚡ 性能預期:")
-            if device_info.startswith("MPS"):
-                print("   • Apple Silicon 優化")
-                print("   • 圖像生成: 10-30 秒")
-                print("   • 影片生成: 1-3 分鐘")
-                print("   • 建議: 16GB+ 統一記憶體")
-            elif device_info.startswith("CUDA"):
-                print("   • GPU 加速，速度最快")
-                print("   • 圖像生成: 5-15 秒")
-                print("   • 影片生成: 30秒-2分鐘")
-                print("   • 建議: 8GB+ VRAM")
-            else:
-                print("   • CPU 模式，速度較慢")
-                print("   • 圖像生成: 1-3 分鐘")
-                print("   • 影片生成: 5-10 分鐘")
-                print("   • 建議: 16GB+ RAM")
-            print()
-            
-            print("🆕 新增功能:")
-            print("   • 獨立的影片生成模組")
-            print("   • 可選擇是否生成影片")
-            print("   • 影片生成狀態監控")
-            print("   • 智能記憶體清理")
-            print("   • 分享功能包含影片")
-            print()
-            
-            print("=" * 80)
-            print("系統準備就緒，啟動 Flask 應用程式...")
-            print("訪問地址: http://localhost:5002")
-            print("=" * 80)
-            
-            self.app.run(debug=debug, host=host, port=port, threaded=True)
-            
-        except KeyboardInterrupt:
-            print("用戶中斷，正在關閉系統...")
-            self.clear_all_memory()
-        except Exception as e:
-            print(f"系統啟動失敗: {e}")
-            import traceback
-            traceback.print_exc()
-            self.clear_all_memory()
-        finally:
-            print("正在清理系統資源...")
-            self.clear_all_memory()
+        print("🚀 啟動夢境分析應用...")
+        self.app.run(debug=debug, host=host, port=port, threaded=True)
 
 
 # 主程式入口
