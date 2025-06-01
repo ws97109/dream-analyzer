@@ -74,6 +74,7 @@
                     </div>
                 </div>
             </div>
+
             
             <div class="text-center mb-4">
                 <button id="restart-btn" class="btn btn-primary">重新開始</button>
@@ -134,18 +135,30 @@
         const copyLinkBtn = $('#copy-link-btn');
         const shareFacebookBtn = $('#share-facebook-btn');
         const shareTwitterBtn = $('#share-twitter-btn');
+        const generateVideoCheckbox = $('#generate-video-checkbox');
         
         // 防重複提交狀態
         let isProcessing = false;
         
-        // 處理進度的步驟
-        const steps = [
-            { status: '正在分析夢境元素...', detail: '識別關鍵元素與象徵意義', progress: 10 },
-            { status: '正在創作夢境故事...', detail: '融合夢境元素創作完整故事', progress: 30 },
-            { status: '正在生成視覺圖像...', detail: '使用 Stable Diffusion 創建夢境視覺化圖像', progress: 70 },
-            { status: '正在進行心理分析...', detail: '根據夢境內容進行深度分析', progress: 95 },
-            { status: '完成！', detail: '您的夢境分析結果已經準備好', progress: 100 }
-        ];
+        // 處理進度的步驟（根據是否生成影片動態調整）
+        function getSteps(includeVideo) {
+            const baseSteps = [
+                { status: '正在分析夢境元素...', detail: '識別關鍵元素與象徵意義', progress: 10 },
+                { status: '正在創作夢境故事...', detail: '融合夢境元素創作完整故事', progress: 25 },
+                { status: '正在生成視覺圖像...', detail: '使用 Stable Diffusion 創建夢境視覺化圖像', progress: includeVideo ? 50 : 70 }
+            ];
+            
+            if (includeVideo) {
+                baseSteps.push({ status: '正在生成夢境影片...', detail: '從圖像創建動態影片，請耐心等候', progress: 85 });
+            }
+            
+            baseSteps.push(
+                { status: '正在進行心理分析...', detail: '根據夢境內容進行深度分析', progress: 95 },
+                { status: '完成！', detail: '您的夢境分析結果已經準備好', progress: 100 }
+            );
+            
+            return baseSteps;
+        }
         
         // 字數計算
         dreamInput.on('input', function() {
@@ -158,6 +171,7 @@
             e.preventDefault();
             
             const dreamText = dreamInput.val().trim();
+            const generateVideo = generateVideoCheckbox.is(':checked');
             
             // 基本驗證
             if (dreamText.length < 10) {
@@ -176,7 +190,7 @@
             
             // 禁用提交按鈕並改變文字
             analyzeBtn.prop('disabled', true);
-            analyzeBtn.text('分析中...');
+            analyzeBtn.text(generateVideo ? '分析並生成影片中...' : '分析中...');
             
             // 顯示載入中
             loading.show();
@@ -185,10 +199,12 @@
             // 重置進度條
             progressBar.css('width', '0%');
             progressBar.attr('aria-valuenow', 0);
+            
+            const steps = getSteps(generateVideo);
             processDetail.text(steps[0].detail);
             
             // 使用AJAX發送請求
-            processDream(dreamText);
+            processDream(dreamText, generateVideo);
         });
         
         // 重新開始按鈕
@@ -201,18 +217,36 @@
             dreamInput.val('');
             charCount.text('0 個字');
             errorMessage.hide();
+            generateVideoCheckbox.prop('checked', false);
+            $('#video-section').hide();
             dreamInput.focus();
         });
         
         // 分享按鈕
         shareBtn.on('click', function() {
-            // 創建一個唯一的URL或是短連結
-            const shareUrl = window.location.origin + '/share/' + Date.now();
-            $('#share-link').val(shareUrl);
+            // 準備分享數據
+            const shareData = {
+                finalStory: $('#final-story').text(),
+                imagePath: $('#dream-image').attr('src'),
+                videoPath: $('#dream-video').attr('src') || null,
+                psychologyAnalysis: $('#psychology-analysis').text()
+            };
             
-            // 顯示分享模態框
-            var shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
-            shareModal.show();
+            // 發送分享請求
+            $.ajax({
+                url: '/api/share',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(shareData),
+                success: function(response) {
+                    $('#share-link').val(response.shareUrl);
+                    var shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
+                    shareModal.show();
+                },
+                error: function() {
+                    alert('創建分享連結失敗，請稍後再試');
+                }
+            });
         });
         
         // 複製連結
@@ -241,7 +275,9 @@
         });
         
         // 處理夢境分析
-        function processDream(dreamText) {
+        function processDream(dreamText, generateVideo) {
+            const steps = getSteps(generateVideo);
+            
             // 進度更新
             let currentStep = 0;
             
@@ -257,23 +293,26 @@
                 progressBar.css('width', step.progress + '%');
                 progressBar.attr('aria-valuenow', step.progress);
                 
-                // 圖像生成步驟需要停留更長時間
-                if (step.status.includes('生成視覺圖像')) {
+                // 圖像生成和影片生成步驟需要停留更長時間
+                if (step.status.includes('生成視覺圖像') || step.status.includes('生成夢境影片')) {
                     setTimeout(function() {
                         currentStep++;
-                    }, 2000); // 多等待2秒
+                    }, step.status.includes('生成夢境影片') ? 4000 : 2000);
                 } else {
                     currentStep++;
                 }
-            }, 1200); // 稍微調慢進度條速度
+            }, 1200);
             
             // 發送API請求
             $.ajax({
                 url: '/api/analyze',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ dream: dreamText }),
-                timeout: 180000,  // 設定3分鐘超時
+                data: JSON.stringify({ 
+                    dream: dreamText,
+                    generateVideo: generateVideo
+                }),
+                timeout: generateVideo ? 300000 : 180000,  // 如果生成影片則延長到5分鐘超時
                 success: function(response) {
                     // 確保進度條走完
                     setTimeout(function() {
@@ -330,6 +369,26 @@
             } else {
                 $('#dream-image').attr('src', '/static/images/default_dream.png');
                 $('#dream-image').attr('alt', '未能生成夢境圖像');
+            }
+            
+            // 設置影片
+            if (data.videoPath) {
+                $('#dream-video').attr('src', data.videoPath);
+                $('#video-section').show();
+                console.log('✅ 影片顯示成功:', data.videoPath);
+            } else {
+                $('#video-section').hide();
+                console.log('⚠️ 沒有影片路徑');
+            }
+            
+            // 輸出處理資訊（用於調試）
+            if (data.processingInfo) {
+                console.log('處理資訊:', data.processingInfo);
+                if (data.processingInfo.videoGenerated) {
+                    console.log('✅ 影片生成成功');
+                } else {
+                    console.log('⚠️ 影片未生成');
+                }
             }
         }
     });
