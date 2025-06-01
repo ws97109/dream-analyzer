@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-share"></i> 分享的夢境分析結果
+                </h2>
+                <small class="text-white-50">分享時間: {{ data.created_at }}</small>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">以下是一位用戶分享的夢境分析結果，包含 AI 生成的故事、圖像和影片：</p>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">🌙 夢境故事</h5>
+            </div>
+            <div class="card-body">
+                <p>{{ data.finalStory }}</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">🎨 視覺化夢境</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        {% if data.imagePath %}
+                            <img src="/static/{{ data.imagePath }}" class="img-fluid rounded" alt="夢境視覺化圖像" style="max-height: 400px;">
+                        {% else %}
+                            <img src="/static/images/default_dream.png" class="img-fluid rounded" alt="預設夢境圖像" style="max-height: 400px;">
+                        {% endif %}
+                        <div class="text-muted small mt-2">由 Stable Diffusion 生成</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">🧠 夢境心理分析</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ data.psychologyAnalysis }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% endif %}
+        
+        <div class="text-center mb-4">
+            <a href="/" class="btn btn-primary">
+                <i class="bi bi-arrow-left-circle"></i> 返回首頁
+            </a>
+            <button class="btn btn-success ms-2" onclick="shareCurrentPage()">
+                <i class="bi bi-share"></i> 再次分享
+            </button>
+        </div>
+        
+        <div class="card">
+            <div class="card-body text-center">
+                <h6>想要分析您自己的夢境嗎？</h6>
+                <p class="text-muted mb-2">使用我們的 AI 夢境分析系統，創建專屬於您的夢境故事、視覺化圖像和動態影片。</p>
+                <a href="/" class="btn btn-outline-primary">
+                    <i class="bi bi-cloud-moon"></i> 開始分析我的夢境
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function shareCurrentPage() {
+    if (navigator.share) {
+        navigator.share({
+            title: '夢境分析結果 - AI 生成的故事與影片',
+            text: '看看這個有趣的夢境分析結果，包含 AI 生成的視覺化圖像和動態影片！',
+            url: window.location.href
+        });
+    } else {
+        // 備用方案：複製到剪貼板
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            alert('連結已複製到剪貼板！');
+        }, function() {
+            // 如果都不支援，就顯示連結
+            prompt('請複製這個連結來分享：', window.location.href);
+        });
+    }
+}
+</script>
+{% endblock %}
