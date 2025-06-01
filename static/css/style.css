@@ -1,228 +1,454 @@
-/* styles.css */
+/* 夢境分析系統樣式 */
 
+/* 基本佈局 */
 body {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    color: #333;
 }
 
 .container {
     flex: 1;
 }
 
+/* 導航欄增強 */
 .navbar-brand {
     font-weight: bold;
+    font-size: 1.3rem;
 }
 
-.footer {
-    margin-top: 2rem;
+.navbar-brand .badge {
+    font-size: 0.6rem;
 }
 
+/* 主要卡片樣式 */
 .card {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    margin-bottom: 25px;
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
 }
 
 .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
 }
 
 .card-header {
     font-weight: bold;
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+    background: linear-gradient(135deg, var(--bs-primary) 0%, #4e73df 100%) !important;
 }
 
+.card-header.bg-success {
+    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%) !important;
+}
+
+.card-header.bg-info {
+    background: linear-gradient(135deg, #36b9cc 0%, #258391 100%) !important;
+}
+
+.card-header.bg-danger {
+    background: linear-gradient(135deg, #e74a3b 0%, #be392f 100%) !important;
+}
+
+.card-header.bg-warning {
+    background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%) !important;
+}
+
+/* 表單元素增強 */
 textarea {
     resize: vertical;
     min-height: 120px;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
 }
 
+textarea:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* 按鈕增強 */
+.btn {
+    border-radius: 25px;
+    padding: 8px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    box-shadow: 0 4px 15px rgba(78, 115, 223, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #224abe 0%, #1e3a8a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(78, 115, 223, 0.4);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);
+    box-shadow: 0 4px 15px rgba(28, 200, 138, 0.3);
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #13855c 0%, #0f6848 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(28, 200, 138, 0.4);
+}
+
+/* 載入動畫增強 */
 .loading {
     margin: 30px 0;
+    text-align: center;
 }
 
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 進度條增強 */
 .progress {
-    height: 12px;
-    margin-top: 15px;
-    border-radius: 6px;
+    height: 15px;
+    margin-top: 20px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .progress-bar {
-    transition: width 0.6s ease;
+    background: linear-gradient(90deg, #4e73df, #1cc88a, #36b9cc);
+    background-size: 200% 100%;
+    animation: progressGradient 2s ease infinite;
+    transition: width 0.8s ease;
 }
 
-#dream-image {
+@keyframes progressGradient {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 圖像和影片增強 */
+#dream-image, #dream-video {
     max-width: 100%;
     max-height: 400px;
     margin: 0 auto;
     display: block;
-    border: 1px solid #ddd;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
 }
 
 #dream-image:hover {
-    transform: scale(1.02);
+    transform: scale(1.03);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+}
+
+#dream-video {
+    border: 3px solid #fff;
 }
 
 /* 進度詳情樣式 */
 #process-detail {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: #6c757d;
-    margin-top: 8px;
+    margin-top: 10px;
+    font-style: italic;
 }
 
-/* 添加漸變效果 */
-.bg-primary {
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important;
+/* 影片設定區塊 */
+#video-settings {
+    background: linear-gradient(135deg, rgba(54, 185, 204, 0.1) 0%, rgba(78, 115, 223, 0.1) 100%);
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 10px;
 }
 
-.bg-success {
-    background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%) !important;
+.form-range {
+    height: 8px;
+    border-radius: 5px;
 }
 
-.bg-info {
-    background: linear-gradient(135deg, #36b9cc 0%, #258391 100%) !important;
+.form-range::-webkit-slider-thumb {
+    background: #4e73df;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-.bg-danger {
-    background: linear-gradient(135deg, #e74a3b 0%, #be392f 100%) !important;
-}
-
-.bg-secondary {
-    background: linear-gradient(135deg, #858796 0%, #60616f 100%) !important;
-}
-
-.bg-warning {
-    background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%) !important;
-}
-
-/* 添加動畫 */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
+/* 結果區塊動畫 */
 .results-section {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 卡片淡入效果 */
 @keyframes cardFadeIn {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.95); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
 }
 
 .card {
-    animation: cardFadeIn 0.4s ease-in-out;
+    animation: cardFadeIn 0.5s ease-in-out;
 }
 
-/* 分享按鈕樣式 */
-#share-btn {
-    transition: background-color 0.3s ease;
+/* 分享功能增強 */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
 }
 
-#share-btn:hover {
-    background-color: #218838;
+.modal-header {
+    border-radius: 15px 15px 0 0;
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    color: white;
+    border: none;
+}
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* 社交媒體分享按鈕 */
 #share-facebook-btn {
-    background-color: #3b5998;
-    border-color: #3b5998;
+    background: linear-gradient(135deg, #3b5998 0%, #2d4373 100%);
+    border: none;
 }
 
 #share-twitter-btn {
-    background-color: #1da1f2;
-    border-color: #1da1f2;
+    background: linear-gradient(135deg, #1da1f2 0%, #0d8bd9 100%);
+    border: none;
 }
 
-/* 複製按鈕效果 */
 #copy-link-btn {
     transition: all 0.3s ease;
+    border-radius: 0 8px 8px 0;
 }
 
 #copy-link-btn:active {
-    transform: translateY(2px);
+    transform: scale(0.95);
 }
 
 /* 分享鏈接輸入框 */
 #share-link {
-    background-color: #f8f9fa;
-    border-color: #ced4da;
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px 0 0 8px;
 }
 
-/* 響應式調整 */
+/* 狀態徽章 */
+.badge {
+    border-radius: 12px;
+    padding: 6px 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Footer 增強 */
+.footer {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%) !important;
+    color: white;
+    margin-top: 3rem;
+    border-top: 3px solid #4e73df;
+}
+
+.footer h6 {
+    color: #fff;
+    font-weight: 600;
+}
+
+.footer .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 響應式設計 */
 @media (max-width: 768px) {
     .card-body {
-        padding: 1rem;
+        padding: 1.5rem 1rem;
     }
     
-    h5 {
+    h5, .card-title {
         font-size: 1.1rem;
     }
     
-    /* 在手機上調整進度條大小 */
     .progress {
-        height: 10px;
-        margin-top: 10px;
+        height: 12px;
+        margin-top: 15px;
     }
     
-    /* 在手機上調整按鈕大小和間距 */
     #restart-btn, #share-btn {
-        padding: 0.375rem 0.75rem;
+        padding: 8px 16px;
         font-size: 0.9rem;
+        margin: 5px;
+    }
+    
+    .btn {
+        border-radius: 20px;
+    }
+    
+    #dream-image, #dream-video {
+        max-height: 300px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
     }
 }
 
-/* 添加暗色模式支持 */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #1a1a1a;
-        color: #f8f9fa;
+@media (max-width: 576px) {
+    .container {
+        padding: 0 10px;
     }
     
     .card {
-        background-color: #2d2d2d;
-        border-color: #444;
+        margin: 10px 0;
+        border-radius: 10px;
     }
     
-    .card-body {
-        color: #e0e0e0;
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
     }
     
-    .form-control {
-        background-color: #2d2d2d;
-        border-color: #444;
-        color: #e0e0e0;
+    textarea {
+        min-height: 100px;
     }
     
-    .form-control:focus {
-        background-color: #363636;
+    .progress {
+        height: 10px;
+    }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: #ecf0f1;
+    }
+    
+    .card {
+        background: rgba(52, 73, 94, 0.95);
+        color: #ecf0f1;
+    }
+    
+    .form-control, .form-select {
+        background: rgba(52, 73, 94, 0.8);
+        border-color: #5a6c7d;
+        color: #ecf0f1;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: rgba(52, 73, 94, 0.9);
+        border-color: #4e73df;
         color: #fff;
     }
     
-    .form-text, .text-muted {
-        color: #adb5bd !important;
-    }
-    
-    .text-dark {
-        color: #e0e0e0 !important;
+    .text-muted {
+        color: #bdc3c7 !important;
     }
     
     .modal-content {
-        background-color: #2d2d2d;
-        color: #e0e0e0;
+        background: #34495e;
+        color: #ecf0f1;
     }
     
     .modal-header, .modal-footer {
-        border-color: #444;
+        border-color: #5a6c7d;
     }
-    
-    .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* 特殊效果 */
+.glow {
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 0 0 20px rgba(78, 115, 223, 0.5);
+    }
+    to {
+        box-shadow: 0 0 30px rgba(78, 115, 223, 0.8);
+    }
+}
+
+/* 自定義滾動條 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #224abe 0%, #1e3a8a 100%);
+}
+
+/* 載入骨架效果 */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
     }
 }
