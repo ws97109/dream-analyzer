@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="card-title mb-0">夢境分析與視覺化</h2>
+            </div>
+            <div class="card-body">
+                <div class="input-section">
+                    <form id="dream-form">
+                        <div class="mb-3">
+                            <label for="dream-input" class="form-label">請輸入您的夢境片段：</label>
+                            <textarea id="dream-input" name="dream" class="form-control" 
+                                rows="5" placeholder="例如：我夢見自己在飛行，下方是一片湛藍的大海，突然看到一座閃閃發光的城堡..." required></textarea>
+                            <div class="form-text" id="char-count">0 個字</div>
+                        </div>
+                        
+                        <!-- 新增：視頻生成選項 -->
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="generate-video-checkbox" name="generateVideo">
+                                <label class="form-check-label" for="generate-video-checkbox">
+                                    <i class="bi bi-camera-video"></i> 生成夢境動態影片
+                                    <small class="text-muted d-block">使用本地輕量模型將圖像轉換為動態影片（快速生成）</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- 新增：視頻效果選項 -->
+                        <div class="mb-3" id="video-options" style="display: none;">
+                            <label class="form-label">視頻效果類型：</label>
+                            <div class="row">
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="videoType" id="video-parallax" value="parallax" checked>
+                                        <label class="form-check-label" for="video-parallax">
+                                            <i class="bi bi-layers"></i> 視差效果
+                                            <small class="text-muted d-block">輕微縮放和平移</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="videoType" id="video-breathing" value="breathing">
+                                        <label class="form-check-label" for="video-breathing">
+                                            <i class="bi bi-heart-pulse"></i> 呼吸效果
+                                            <small class="text-muted d-block">律動縮放效果</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="videoType" id="video-wave" value="wave">
+                                        <label class="form-check-label" for="video-wave">
+                                            <i class="bi bi-water"></i> 波浪效果
+                                            <small class="text-muted d-block">流動波紋效果</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="videoType" id="video-mixed" value="mixed">
+                                        <label class="form-check-label" for="video-mixed">
+                                            <i class="bi bi-magic"></i> 混合效果
+                                            <small class="text-muted d-block">多種效果組合</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary" id="analyze-btn">開始分析</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="loading mt-4" id="loading" style="display: none;">
+                    <div class="text-center mb-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">處理中...</span>
+                        </div>
+                    </div>
+                    <p class="text-center" id="process-status">正在分析夢境元素...</p>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="progress-bar" role="progressbar" style="width: 0%;" 
+                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="text-center text-muted mt-2 small" id="process-detail">分析夢境元素並創建故事架構...</p>
+                </div>
+                
+                <div class="alert alert-danger mt-3" id="error-message" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="results-section mt-4" id="results" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">夢境故事</h5>
+                </div>
+                <div class="card-body">
+                    <p id="final-story"></p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">視覺化夢境</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <img id="dream-image" class="img-fluid rounded" src="" alt="視覺化夢境圖像">
+                            <div class="text-muted small mt-2">由 Stable Diffusion 生成</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">夢境心理分析</h5>
+                        </div>
+                        <div class="card-body">
+                            <p id="psychology-analysis"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 新增：視頻顯示區塊 -->
+            <div class="card mb-4" id="video-section" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-camera-video"></i> 夢境動態影片
+                        <small class="text-white-50 ms-2" id="video-type-display"></small>
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <video id="dream-video" class="img-fluid rounded" controls autoplay muted loop style="max-width: 100%; max-height: 400px;">
+                        您的瀏覽器不支援視頻播放。
+                    </video>
+                    <div class="text-muted small mt-2">本地輕量模型生成 • 3秒循環播放</div>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <button id="restart-btn" class="btn btn-primary">重新開始</button>
+                <button id="share-btn" class="btn btn-success ms-2">分享結果</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分享模態框 -->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="shareModalLabel">分享您的夢境分析結果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="share-link" class="form-label">分享連結</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="share-link" readonly>
+                        <button class="btn btn-outline-secondary" type="button" id="copy-link-btn">複製</button>
+                    </div>
+                </div>
+                <div class="d-grid gap-2 mt-3">
+                    <button type="button" class="btn btn-primary" id="share-facebook-btn">
+                        <i class="bi bi-facebook"></i> 分享到 Facebook
+                    </button>
+                    <button type="button" class="btn btn-info text-white" id="share-twitter-btn">
+                        <i class="bi bi-twitter"></i> 分享到 Twitter
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        const dreamInput = $('#dream-input');
+        const dreamForm = $('#dream-form');
+        const analyzeBtn = $('#analyze-btn');
+        const loading = $('#loading');
+        const results = $('#results');
+        const charCount = $('#char-count');
+        const processStatus = $('#process-status');
+        const processDetail = $('#process-detail');
+        const progressBar = $('#progress-bar');
+        const errorMessage = $('#error-message');
+        const restartBtn = $('#restart-btn');
+        const shareBtn = $('#share-btn');
+        const copyLinkBtn = $('#copy-link-btn');
+        const shareFacebookBtn = $('#share-facebook-btn');
+        const shareTwitterBtn = $('#share-twitter-btn');
+        const generateVideoCheckbox = $('#generate-video-checkbox');
+        const videoOptions = $('#video-options');
+        
+        // 視頻選項顯示/隱藏控制
+        generateVideoCheckbox.on('change', function() {
+            if ($(this).is(':checked')) {
+                videoOptions.slideDown();
+            } else {
+                videoOptions.slideUp();
+            }
+        });
+        
+        // 防重複提交狀態
+        let isProcessing = false;
+        
+        // 處理進度的步驟（根據是否生成影片動態調整）
+        function getSteps(includeVideo) {
+            const baseSteps = [
+                { status: '正在分析夢境元素...', detail: '識別關鍵元素與象徵意義', progress: 10 },
+                { status: '正在創作夢境故事...', detail: '融合夢境元素創作完整故事', progress: 25 },
+                { status: '正在生成視覺圖像...', detail: '使用 Stable Diffusion 創建夢境視覺化圖像', progress: includeVideo ? 50 : 70 }
+            ];
+            
+            if (includeVideo) {
+                baseSteps.push({ status: '正在生成夢境影片...', detail: '使用本地輕量模型創建動態效果，快速生成中...', progress: 85 });
+            }
+            
+            baseSteps.push(
+                { status: '正在進行心理分析...', detail: '根據夢境內容進行深度分析', progress: 95 },
+                { status: '完成！', detail: '您的夢境分析結果已經準備好', progress: 100 }
+            );
+            
+            return baseSteps;
+        }
+        
+        // 字數計算
+        dreamInput.on('input', function() {
+            const count = dreamInput.val().length;
+            charCount.text(count + ' 個字');
+        });
+        
+        // 表單提交
+        dreamForm.on('submit', function(e) {
+            e.preventDefault();
+            
+            const dreamText = dreamInput.val().trim();
+            const generateVideo = generateVideoCheckbox.is(':checked');
+            const videoType = $('input[name="videoType"]:checked').val() || 'parallax';
+            
+            // 基本驗證
+            if (dreamText.length < 10) {
+                errorMessage.text('請輸入至少10個字的夢境描述');
+                errorMessage.show();
+                return;
+            }
+            
+            // 簡單的重複提交檢查
+            if (analyzeBtn.prop('disabled')) {
+                return;
+            }
+            
+            // 隱藏錯誤訊息
+            errorMessage.hide();
+            
+            // 禁用提交按鈕並改變文字
+            analyzeBtn.prop('disabled', true);
+            analyzeBtn.text(generateVideo ? '分析並生成影片中...' : '分析中...');
+            
+            // 顯示載入中
+            loading.show();
+            results.hide();
+            
+            // 重置進度條
+            progressBar.css('width', '0%');
+            progressBar.attr('aria-valuenow', 0);
+            
+            const steps = getSteps(generateVideo);
+            processDetail.text(steps[0].detail);
+            
+            // 使用AJAX發送請求
+            processDream(dreamText, generateVideo, videoType);
+        });
+        
+        // 重新開始按鈕
+        restartBtn.on('click', function() {
+            // 重置狀態
+            analyzeBtn.prop('disabled', false);
+            analyzeBtn.text('開始分析');
+            
+            results.hide();
+            dreamInput.val('');
+            charCount.text('0 個字');
+            errorMessage.hide();
+            generateVideoCheckbox.prop('checked', false);
+            videoOptions.hide();
+            $('#video-section').hide();
+            dreamInput.focus();
+        });
+        
+        // 分享按鈕
+        shareBtn.on('click', function() {
+            // 準備分享數據
+            const shareData = {
+                finalStory: $('#final-story').text(),
+                imagePath: $('#dream-image').attr('src'),
+                videoPath: $('#dream-video').attr('src') || null,
+                psychologyAnalysis: $('#psychology-analysis').text()
+            };
+            
+            // 發送分享請求
+            $.ajax({
+                url: '/api/share',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(shareData),
+                success: function(response) {
+                    $('#share-link').val(response.shareUrl);
+                    var shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
+                    shareModal.show();
+                },
+                error: function() {
+                    alert('創建分享連結失敗，請稍後再試');
+                }
+            });
+        });
+        
+        // 複製連結
+        copyLinkBtn.on('click', function() {
+            const shareLink = $('#share-link');
+            shareLink.select();
+            document.execCommand('copy');
+            
+            // 顯示複製成功
+            copyLinkBtn.text('已複製!');
+            setTimeout(function() {
+                copyLinkBtn.text('複製');
+            }, 2000);
+        });
+        
+        // 社交媒體分享按鈕
+        shareFacebookBtn.on('click', function() {
+            const shareUrl = $('#share-link').val();
+            window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl), '_blank');
+        });
+        
+        shareTwitterBtn.on('click', function() {
+            const shareUrl = $('#share-link').val();
+            const shareText = '我剛剛使用夢境分析系統分析了我的夢境，還生成了動態影片，看看結果！';
+            window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl), '_blank');
+        });
+        
+        // 處理夢境分析
+        function processDream(dreamText, generateVideo, videoType) {
+            const steps = getSteps(generateVideo);
+            
+            // 進度更新
+            let currentStep = 0;
+            
+            const progressInterval = setInterval(function() {
+                if (currentStep >= steps.length) {
+                    clearInterval(progressInterval);
+                    return;
+                }
+                
+                const step = steps[currentStep];
+                processStatus.text(step.status);
+                processDetail.text(step.detail);
+                progressBar.css('width', step.progress + '%');
+                progressBar.attr('aria-valuenow', step.progress);
+                
+                // 圖像生成和影片生成步驟需要停留更長時間
+                if (step.status.includes('生成視覺圖像')) {
+                    setTimeout(function() {
+                        currentStep++;
+                    }, 2000);
+                } else if (step.status.includes('生成夢境影片')) {
+                    setTimeout(function() {
+                        currentStep++;
+                    }, 1500); // 本地生成較快
+                } else {
+                    currentStep++;
+                }
+            }, 1200);
+            
+            // 發送API請求
+            $.ajax({
+                url: '/api/analyze',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    dream: dreamText,
+                    generateVideo: generateVideo,
+                    videoType: videoType
+                }),
+                timeout: generateVideo ? 120000 : 60000,  // 本地生成較快，縮短超時時間
+                success: function(response) {
+                    // 確保進度條走完
+                    setTimeout(function() {
+                        clearInterval(progressInterval);
+                        processStatus.text('完成！');
+                        processDetail.text('您的夢境分析結果已經準備好');
+                        progressBar.css('width', '100%');
+                        progressBar.attr('aria-valuenow', 100);
+                        
+                        // 顯示結果
+                        displayResults(response);
+                        
+                        // 隱藏載入中並恢復狀態
+                        setTimeout(function() {
+                            loading.hide();
+                            results.show();
+                            // 恢復按鈕狀態
+                            analyzeBtn.prop('disabled', false);
+                            analyzeBtn.text('開始分析');
+                        }, 500);
+                    }, Math.max(0, steps.length * 1200 - 1200));
+                },
+                error: function(xhr, status, error) {
+                    clearInterval(progressInterval);
+                    loading.hide();
+                    
+                    // 恢復按鈕狀態
+                    analyzeBtn.prop('disabled', false);
+                    analyzeBtn.text('開始分析');
+                    
+                    let errorMsg = '處理請求時發生錯誤';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    } else if (status === 'timeout') {
+                        errorMsg = '請求超時，請重試';
+                    }
+                    
+                    errorMessage.text(errorMsg);
+                    errorMessage.show();
+                }
+            });
+        }
+        
+        // 顯示結果
+        function displayResults(data) {
+            // 填充完整故事、圖像和心理分析
+            $('#final-story').text(data.finalStory);
+            $('#psychology-analysis').text(data.psychologyAnalysis);
+            
+            // 設置圖像
+            if (data.imagePath) {
+                $('#dream-image').attr('src', data.imagePath);
+                $('#dream-image').attr('alt', '夢境視覺化圖像');
+            } else {
+                $('#dream-image').attr('src', '/static/images/default_dream.png');
+                $('#dream-image').attr('alt', '未能生成夢境圖像');
+            }
+            
+            // 設置影片
+            if (data.videoPath) {
+                $('#dream-video').attr('src', data.videoPath);
+                $('#video-section').show();
+                
+                // 顯示視頻類型
+                if (data.processingInfo && data.processingInfo.videoType) {
+                    const typeNames = {
+                        'parallax': '視差效果',
+                        'breathing': '呼吸效果', 
+                        'wave': '波浪效果',
+                        'mixed': '混合效果'
+                    };
+                    $('#video-type-display').text(`(${typeNames[data.processingInfo.videoType] || data.processingInfo.videoType})`);
+                }
+                
+                console.log('✅ 影片顯示成功:', data.videoPath);
+            } else {
+                $('#video-section').hide();
+                console.log('⚠️ 沒有影片路徑');
+            }
+            
+            // 輸出處理資訊（用於調試）
+            if (data.processingInfo) {
+                console.log('處理資訊:', data.processingInfo);
+                if (data.processingInfo.videoGenerated) {
+                    console.log('✅ 影片生成成功');
+                } else {
+                    console.log('⚠️ 影片未生成');
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
