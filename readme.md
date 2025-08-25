@@ -15,6 +15,9 @@ stable-diffusion-v1-5能夠讀取的語言，生出使用者所夢到的圖片�
 3. **圖像生成**：使用Stable Diffusion基於翻譯後的故事生成視覺圖像
 4. **心理分析**：使用Ollama的Qwen模型對夢境進行心理解析
 
+![圖片描述](image/1.jpg)
+
+![圖片描述](image/2.jpg)
 ## 系統需求
 
 - Python 3.10
